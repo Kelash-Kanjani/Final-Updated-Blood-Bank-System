@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>🗄️ Database Management (DBMS)</h2>
+<p class="text-muted mb-4">
+    This page demonstrates all DBMS concepts implemented in the Blood Bank System.
+</p>
+
+<!-- NAV TABS -->
+<ul class="nav nav-tabs mb-4" id="dbmsTabs">
+    <li class="nav-item"><a class="nav-link active" href="#norm"     data-bs-toggle="tab">📐 Normalization</a></li>
+    <li class="nav-item"><a class="nav-link"         href="#indexes"  data-bs-toggle="tab">🔍 Indexes</a></li>
+    <li class="nav-item"><a class="nav-link"         href="#triggers" data-bs-toggle="tab">⚡ Triggers</a></li>
+    <li class="nav-item"><a class="nav-link"         href="#views"    data-bs-toggle="tab">👁️ Views</a></li>
+    <li class="nav-item"><a class="nav-link"         href="#sp"       data-bs-toggle="tab">📦 Stored Procedures</a></li>
+    <li class="nav-item"><a class="nav-link"         href="#live"     data-bs-toggle="tab">📊 Live Data</a></li>
+    <li class="nav-item"><a class="nav-link"         href="#tables"   data-bs-toggle="tab">🗂️ Tables</a></li>
+</ul>
+
+<div class="tab-content">
+
+<!-- ─── NORMALIZATION ──────────────────────────────────────── -->
+<div class="tab-pane fade show active" id="norm">
+    <div class="card shadow p-4 mb-4">
+        <h4>📐 Database Normalization</h4>
+        <p class="text-muted">The database follows all three normal forms to eliminate redundancy and ensure data integrity.</p>
+
+        <h5 class="mt-3">1NF — First Normal Form</h5>
+        <div class="alert alert-success">
+            ✅ Every table has a primary key. Every column holds atomic (single) values.
+            No repeating groups. Blood group is a single value per donor, not a list.
+        </div>
+        <table class="table table-bordered table-sm">
+            <thead class="table-danger"><tr><th>Table</th><th>Primary Key</th><th>Atomic Columns</th></tr></thead>
+            <tbody>
+                <tr><td>Donor</td><td>id (AUTOINCREMENT)</td><td>name, cnic, phone, email, blood_group — all single values</td></tr>
+                <tr><td>Stock</td><td>id (AUTOINCREMENT)</td><td>One row per donation batch — no multi-valued columns</td></tr>
+                <tr><td>Donation</td><td>id (AUTOINCREMENT)</td><td>One row per donation event — no repeating groups</td></tr>
+                <tr><td>Requests</td><td>id (AUTOINCREMENT)</td><td>One row per hospital request</td></tr>
+                <tr><td>AuditLog</td><td>id (AUTOINCREMENT)</td><td>One row per system event</td></tr>
+            </tbody>
+        </table>
+
+        <h5 class="mt-4">2NF — Second Normal Form</h5>
+        <div class="alert alert-success">
+            ✅ No partial dependencies. Every non-key column depends on the <strong>whole</strong> primary key,
+            not just part of it. Since all primary keys are single columns (no composite PKs), 2NF is automatically satisfied.
+        </div>
+        <table class="table table-bordered table-sm">
+            <thead class="table-danger"><tr><th>Table</th><th>Non-Key Columns</th><th>Depends On</th></tr></thead>
+            <tbody>
+                <tr><td>Donation</td><td>donation_date, units</td><td>Fully on Donation.id ✅</td></tr>
+                <tr><td>Stock</td><td>blood_group, units, dates</td><td>Fully on Stock.id ✅</td></tr>
+                <tr><td>Donor</td><td>name, cnic, blood_group</td><td>Fully on Donor.id ✅</td></tr>
+            </tbody>
+        </table>
+
+        <h5 class="mt-4">3NF — Third Normal Form</h5>
+        <div class="alert alert-success">
+            ✅ No transitive dependencies. No non-key column depends on another non-key column.
+            Donor details (name, cnic) are not repeated in the Donation table — only donor_id is stored as a Foreign Key.
+        </div>
+        <table class="table table-bordered table-sm">
+            <thead class="table-danger"><tr><th>Design Decision</th><th>Why it satisfies 3NF</th></tr></thead>
+            <tbody>
+                <tr>
+                    <td>Donation stores <code>donor_id</code>, not donor name or blood group</td>
+                    <td>Donor name depends on Donor.id, not on Donation.id — no transitive dependency</td>
+                </tr>
+                <tr>
+                    <td>Stock stores <code>blood_group</code> directly (not a FK to Donor)</td>
+                    <td>Once blood is in stock it is independent of who donated it — correct separation</td>
+                </tr>
+                <tr>
+                    <td>Hospital name stored in Requests as text (not a separate table)</td>
+                    <td>Hospital info is not further decomposed because no hospital attributes are tracked beyond name</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h5 class="mt-4">Entity Relationship Summary</h5>
+        <div class="alert alert-info" style="font-family:monospace; font-size:.85rem;">
+            Donor (1) ──────── (M) Donation &nbsp;&nbsp; [One donor can donate many times]<br>
+            Donation (1) ───── (1) Stock batch &nbsp; [Each donation creates one stock batch]<br>
+            Stock (M) ─────── (1) Requests &nbsp;&nbsp;&nbsp; [Multiple batches can fulfill one request]
+        </div>
+    </div>
+</div>
+
+
+<!-- ─── INDEXES ───────────────────────────────────────────── -->
+<div class="tab-pane fade" id="indexes">
+    <div class="card shadow p-4 mb-4">
+        <h4>🔍 Indexes</h4>
+        <p class="text-muted">
+            Indexes speed up SELECT queries. Without an index, SQLite scans every row (full table scan).
+            With an index, it jumps directly to matching rows like a book index.
+        </p>
+
+        <table class="table table-bordered">
+            <thead class="table-danger">
+                <tr><th>Index Name</th><th>Table</th><th>Column</th><th>Why It Helps</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>idx_donor_cnic</code></td><td>Donor</td><td>cnic</td><td>Fast lookup when existing donor searches by CNIC</td></tr>
+                <tr><td><code>idx_donor_phone</code></td><td>Donor</td><td>phone</td><td>Fast lookup when existing donor searches by phone</td></tr>
+                <tr><td><code>idx_donor_code</code></td><td>Donor</td><td>donor_code</td><td>Fast lookup when existing donor searches by Donor ID</td></tr>
+                <tr><td><code>idx_donor_blood</code></td><td>Donor</td><td>blood_group</td><td>Speed up blood-group based filtering in history</td></tr>
+                <tr><td><code>idx_stock_blood</code></td><td>Stock</td><td>blood_group</td><td>Critical — WHERE blood_group=? runs on every request</td></tr>
+                <tr><td><code>idx_stock_expiry</code></td><td>Stock</td><td>expiry_date</td><td>Fast expiry purge — WHERE expiry_date &lt; today</td></tr>
+                <tr><td><code>idx_donation_donor</code></td><td>Donation</td><td>donor_id</td><td>Fast JOIN between Donation and Donor tables</td></tr>
+                <tr><td><code>idx_donation_date</code></td><td>Donation</td><td>donation_date</td><td>Fast date-range queries in history</td></tr>
+                <tr><td><code>idx_requests_status</code></td><td>Requests</td><td>status</td><td>Fast filter by Approved/Rejected in request list</td></tr>
+            </tbody>
+        </table>
+
+        <h5 class="mt-3">Live Indexes in Database</h5>
+        <table class="table table-bordered table-sm">
+            <thead class="table-secondary"><tr><th>Name</th><th>Table</th><th>SQL Definition</th></tr></thead>
+            <tbody>
+                {% for idx in indexes %}
+                <tr>
+                    <td><code>{{ idx['name'] }}</code></td>
+                    <td>{{ idx['tbl_name'] }}</td>
+                    <td><small><code>{{ idx['sql'] or 'auto-generated' }}</code></small></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- ─── TRIGGERS ──────────────────────────────────────────── -->
+<div class="tab-pane fade" id="triggers">
+    <div class="card shadow p-4 mb-4">
+        <h4>⚡ Triggers</h4>
+        <p class="text-muted">
+            Triggers are automatic SQL actions that fire when a specific event (INSERT, UPDATE, DELETE) happens on a table.
+            They enforce business rules automatically without any application code.
+        </p>
+
+        {% for trg in triggers %}
+        <div class="card mb-3 border-warning">
+            <div class="card-header bg-warning text-dark fw-bold">
+                ⚡ {{ trg['name'] }} — fires on table: <code>{{ trg['tbl_name'] }}</code>
+            </div>
+            <div class="card-body">
+                <pre style="background:#1e1e1e; color:#d4d4d4; padding:16px; border-radius:8px;
+                            font-size:.8rem; overflow-x:auto; white-space:pre-wrap;">{{ trg['sql'] }}</pre>
+                <div class="mt-2 text-muted" style="font-size:.82rem;">
+                    {% if 'donation' in trg['name'].lower() and 'insert' in trg['name'].lower() %}
+                    🔸 Every time a donation is recorded, this trigger automatically writes an entry to AuditLog.
+                    {% elif 'stock' in trg['name'].lower() %}
+                    🔸 Every time a stock batch is removed (expired or used), this trigger logs it to AuditLog.
+                    {% elif 'request' in trg['name'].lower() %}
+                    🔸 Every time a blood request is submitted, this trigger logs the outcome to AuditLog.
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+
+        <div class="alert alert-info mt-2">
+            ℹ️ All trigger activity is visible on the <a href="/audit">📜 Audit Log</a> page.
+        </div>
+    </div>
+</div>
+
+
+<!-- ─── VIEWS ─────────────────────────────────────────────── -->
+<div class="tab-pane fade" id="views">
+    <div class="card shadow p-4 mb-4">
+        <h4>👁️ Views</h4>
+        <p class="text-muted">
+            A View is a saved SQL query that behaves like a virtual table. It simplifies complex queries,
+            hides implementation details, and can be queried just like a real table.
+        </p>
+
+        {% for v in views %}
+        <div class="card mb-3 border-primary">
+            <div class="card-header bg-primary text-white fw-bold">
+                👁️ {{ v['name'] }}
+            </div>
+            <div class="card-body">
+                <pre style="background:#1e1e1e; color:#9cdcfe; padding:16px; border-radius:8px;
+                            font-size:.8rem; overflow-x:auto; white-space:pre-wrap;">{{ v['sql'] }}</pre>
+            </div>
+        </div>
+        {% endfor %}
+
+        <h5 class="mt-3">Live Data from vw_BloodSummary</h5>
+        <table class="table table-bordered table-sm">
+            <thead class="table-danger"><tr><th>Blood Group</th><th>Total Units</th><th>Batches</th><th>Earliest Expiry</th></tr></thead>
+            <tbody>
+                {% for r in blood_summary %}
+                <tr>
+                    <td><b>{{ r['blood_group'] }}</b></td>
+                    <td>{{ r['total_units'] }}</td>
+                    <td>{{ r['total_batches'] }}</td>
+                    <td>{{ r['earliest_expiry'] }}</td>
+                </tr>
+                {% endfor %}
+                {% if not blood_summary %}
+                <tr><td colspan="4" class="text-center text-muted">No stock data yet</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        <h5 class="mt-3">Live Data from vw_RequestSummary</h5>
+        <table class="table table-bordered table-sm">
+            <thead class="table-danger"><tr><th>Blood Group</th><th>Total Requests</th><th>Approved</th><th>Rejected</th><th>Units Requested</th></tr></thead>
+            <tbody>
+                {% for r in request_summary %}
+                <tr>
+                    <td><b>{{ r['blood_group'] }}</b></td>
+                    <td>{{ r['total_requests'] }}</td>
+                    <td><span class="badge bg-success">{{ r['approved'] }}</span></td>
+                    <td><span class="badge bg-danger">{{ r['rejected'] }}</span></td>
+                    <td>{{ r['total_units_requested'] }}</td>
+                </tr>
+                {% endfor %}
+                {% if not request_summary %}
+                <tr><td colspan="5" class="text-center text-muted">No request data yet</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- ─── STORED PROCEDURES ─────────────────────────────────── -->
+<div class="tab-pane fade" id="sp">
+    <div class="card shadow p-4 mb-4">
+        <h4>📦 Stored Procedures</h4>
+        <p class="text-muted">
+            SQLite does not have native stored procedure syntax, but the same concept
+            is implemented as encapsulated Python functions. Each function wraps a
+            complete multi-step database operation in a single transaction.
+        </p>
+
+        <div class="card mb-3 border-success">
+            <div class="card-header bg-success text-white fw-bold">SP 1: sp_register_donor()</div>
+            <div class="card-body">
+                <p style="font-size:.85rem;"><b>Purpose:</b> Registers a new donor in the Donor table and returns the new donor_id.</p>
+                <p style="font-size:.85rem;"><b>Called by:</b> Donor registration form (New Donor flow)</p>
+                <pre style="background:#1e1e1e;color:#b5cea8;padding:14px;border-radius:8px;font-size:.78rem;overflow-x:auto;">-- Equivalent SQL Stored Procedure:
+CREATE PROCEDURE sp_register_donor(
+    p_name TEXT, p_nationality TEXT, p_cnic TEXT,
+    p_phone TEXT, p_email TEXT, p_blood_group TEXT, p_donor_code TEXT
+)
+BEGIN
+    INSERT INTO Donor(donor_code, name, nationality, cnic, phone, email, blood_group)
+    VALUES(p_donor_code, p_name, p_nationality, p_cnic, p_phone, p_email, p_blood_group);
+
+    SELECT last_insert_rowid() AS new_donor_id;
+END;</pre>
+            </div>
+        </div>
+
+        <div class="card mb-3 border-success">
+            <div class="card-header bg-success text-white fw-bold">SP 2: sp_record_donation()</div>
+            <div class="card-body">
+                <p style="font-size:.85rem;"><b>Purpose:</b> Records a donation in both the Donation table and the Stock table atomically. If one insert fails, both are rolled back.</p>
+                <p style="font-size:.85rem;"><b>Called by:</b> Donor form (both New and Existing donor)</p>
+                <pre style="background:#1e1e1e;color:#b5cea8;padding:14px;border-radius:8px;font-size:.78rem;overflow-x:auto;">-- Equivalent SQL Stored Procedure:
+CREATE PROCEDURE sp_record_donation(
+    p_donor_id INT, p_blood_group TEXT,
+    p_units INT, p_donation_date TEXT, p_expiry_date TEXT
+)
+BEGIN
+    BEGIN TRANSACTION;
+        INSERT INTO Donation(donor_id, donation_date, units)
+        VALUES(p_donor_id, p_donation_date, p_units);
+
+        INSERT INTO Stock(blood_group, units, donation_date, expiry_date)
+        VALUES(p_blood_group, p_units, p_donation_date, p_expiry_date);
+    COMMIT;
+EXCEPTION
+    ROLLBACK;
+END;</pre>
+            </div>
+        </div>
+
+        <div class="card mb-3 border-success">
+            <div class="card-header bg-success text-white fw-bold">SP 3: sp_process_blood_request()</div>
+            <div class="card-body">
+                <p style="font-size:.85rem;"><b>Purpose:</b> Checks available stock, deducts using FIFO (oldest batches first), and records the request as Approved or Rejected — all in one transaction.</p>
+                <p style="font-size:.85rem;"><b>Called by:</b> Blood Request form</p>
+                <pre style="background:#1e1e1e;color:#b5cea8;padding:14px;border-radius:8px;font-size:.78rem;overflow-x:auto;">-- Equivalent SQL Stored Procedure:
+CREATE PROCEDURE sp_process_blood_request(
+    p_hospital TEXT, p_blood_group TEXT, p_units INT
+)
+BEGIN
+    DECLARE v_available INT;
+    DECLARE v_status TEXT;
+
+    SELECT SUM(units) INTO v_available
+    FROM Stock WHERE blood_group = p_blood_group;
+
+    IF v_available >= p_units THEN
+        -- FIFO deduction from oldest batches
+        -- (loop through batches by donation_date ASC)
+        SET v_status = 'Approved';
+    ELSE
+        SET v_status = 'Rejected';
+    END IF;
+
+    INSERT INTO Requests(hospital, blood_group, units, status)
+    VALUES(p_hospital, p_blood_group, p_units, v_status);
+
+    SELECT v_status AS result;
+END;</pre>
+            </div>
+        </div>
+
+        <div class="card mb-3 border-success">
+            <div class="card-header bg-success text-white fw-bold">SP 4: sp_purge_expired_stock()</div>
+            <div class="card-body">
+                <p style="font-size:.85rem;"><b>Purpose:</b> Removes all stock batches past their expiry date. The trigger <code>trg_after_stock_delete</code> fires automatically for each deleted row.</p>
+                <p style="font-size:.85rem;"><b>Called by:</b> Every page load (auto-maintenance)</p>
+                <pre style="background:#1e1e1e;color:#b5cea8;padding:14px;border-radius:8px;font-size:.78rem;overflow-x:auto;">-- Equivalent SQL Stored Procedure:
+CREATE PROCEDURE sp_purge_expired_stock()
+BEGIN
+    DELETE FROM Stock
+    WHERE expiry_date < date('now');
+    -- trg_after_stock_delete fires automatically for each row
+END;</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ─── LIVE DATA FROM VIEWS ──────────────────────────────── -->
+<div class="tab-pane fade" id="live">
+    <div class="card shadow p-4 mb-4">
+        <h4>📊 Live Data from vw_StockStatus</h4>
+        <p class="text-muted">Queried directly from the database VIEW — not from application code.</p>
+        <table class="table table-bordered">
+            <thead class="table-danger">
+                <tr><th>Blood Group</th><th>Units</th><th>Donated On</th><th>Expires On</th><th>Days Remaining</th></tr>
+            </thead>
+            <tbody>
+                {% for r in stock_view %}
+                <tr class="{{ 'table-warning' if r['days_remaining'] <= 7 else '' }}">
+                    <td><b>{{ r['blood_group'] }}</b></td>
+                    <td>{{ r['units'] }}</td>
+                    <td>{{ r['donation_date'] }}</td>
+                    <td>{{ r['expiry_date'] }}</td>
+                    <td>
+                        {% if r['days_remaining'] <= 7 %}
+                        <span class="badge bg-warning text-dark">⚠️ {{ r['days_remaining'] }} days</span>
+                        {% else %}
+                        <span class="badge bg-success">{{ r['days_remaining'] }} days</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not stock_view %}
+                <tr><td colspan="5" class="text-center text-muted py-3">No valid stock in database.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- ─── TABLES ────────────────────────────────────────────── -->
+<div class="tab-pane fade" id="tables">
+    <div class="card shadow p-4 mb-4">
+        <h4>🗂️ All Database Tables</h4>
+        <table class="table table-bordered">
+            <thead class="table-danger"><tr><th>Table Name</th><th>Rows</th><th>Purpose</th></tr></thead>
+            <tbody>
+                {% set descriptions = {
+                    'Donor':    'Stores all registered blood donors (Pakistani and Foreign)',
+                    'Donation': 'Records each donation event linked to a donor (FK)',
+                    'Stock':    'Tracks blood batches in storage with expiry dates',
+                    'Requests': 'Records all blood requests from hospitals',
+                    'AuditLog': 'Auto-filled by triggers — logs all system events'
+                } %}
+                {% for t in tables %}
+                <tr>
+                    <td><code>{{ t['name'] }}</code></td>
+                    <td><span class="badge bg-secondary">{{ t['rows'] }} rows</span></td>
+                    <td>{{ descriptions.get(t['name'], '—') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</div><!-- end tab-content -->
+
+{% endblock %}

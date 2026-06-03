@@ -1,0 +1,474 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>🩸 Donor Registration & Donation</h2>
+
+<form method="POST" class="card p-4 shadow mb-4" id="donorForm">
+
+<!-- ══════════════════════════════════════════
+     STEP 1 — NEW OR EXISTING
+══════════════════════════════════════════ -->
+<div class="mb-3">
+    <label class="fw-bold">Donor Type</label>
+    <div class="d-flex gap-3 mt-2">
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="donor_type"
+                   id="typeNew" value="new" checked>
+            <label class="form-check-label" for="typeNew">➕ New Donor</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="donor_type"
+                   id="typeOld" value="old">
+            <label class="form-check-label" for="typeOld">🔍 Existing Donor</label>
+        </div>
+    </div>
+</div>
+
+<hr>
+
+<!-- ══════════════════════════════════════════
+     SECTION A — EXISTING DONOR LOOKUP
+══════════════════════════════════════════ -->
+<div id="sectionExisting" style="display:none;">
+
+    <h5 class="text-danger mb-3">🔍 Find Existing Donor</h5>
+
+    <div class="mb-3">
+        <label class="fw-bold">Search By</label>
+        <div class="d-flex gap-3 mt-2 flex-wrap">
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="lookup_by"
+                       id="byCnic" value="cnic" checked>
+                <label class="form-check-label" for="byCnic">🪪 CNIC Number</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="lookup_by"
+                       id="byPhone" value="phone">
+                <label class="form-check-label" for="byPhone">📱 Mobile Number</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="lookup_by"
+                       id="byCode" value="donor_code">
+                <label class="form-check-label" for="byCode">🆔 Donor ID</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="fw-bold" id="lookupLabel">CNIC Number</label>
+        <input type="text" name="lookup_val" id="lookupVal"
+               class="form-control" placeholder="00000-0000000-0"
+               autocomplete="off">
+        <div id="lookupResult" class="mt-2" style="font-size:.85rem;"></div>
+    </div>
+
+    <!-- Donor preview card (filled by JS after live lookup) -->
+    <div id="donorPreview" style="display:none;"
+         class="alert alert-success p-3 mb-3">
+        <div class="d-flex gap-3 flex-wrap">
+            <div><b>Name:</b> <span id="prevName"></span></div>
+            <div><b>Blood Group:</b> <span id="prevBg"></span></div>
+            <div><b>Nationality:</b> <span id="prevNat"></span></div>
+            <div><b>Phone:</b> <span id="prevPhone"></span></div>
+        </div>
+    </div>
+
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     SECTION B — NEW DONOR
+══════════════════════════════════════════ -->
+<div id="sectionNew">
+
+    <!-- STEP 2 — NATIONALITY -->
+    <div class="mb-3">
+        <label class="fw-bold">Nationality *</label>
+        <div class="d-flex gap-3 mt-2">
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="nationality"
+                       id="natPK" value="Pakistani" checked>
+                <label class="form-check-label" for="natPK">🇵🇰 Pakistani</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="nationality"
+                       id="natFG" value="Foreigner">
+                <label class="form-check-label" for="natFG">🌍 Foreigner</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- INFO BOX — changes based on nationality -->
+    <div id="natInfoBox" class="alert alert-info mb-3" style="font-size:.83rem;">
+        🇵🇰 <b>Pakistani donor:</b> CNIC and Mobile Number are <b>mandatory</b>.
+        Email is optional — if provided, Donor ID will be sent by email.
+    </div>
+
+    <!-- STEP 3 — PERSONAL DETAILS -->
+    <div class="row g-3 mb-3">
+
+        <div class="col-md-6">
+            <label class="fw-bold">Full Name *</label>
+            <input type="text" name="name" id="newName"
+                   class="form-control" placeholder="e.g. Ahmed Khan">
+        </div>
+
+        <div class="col-md-6">
+            <label class="fw-bold">Blood Group *</label>
+            <select name="blood_group" id="newBg" class="form-control">
+                <option value="">Select Blood Group</option>
+                <option>A+</option>
+                <option>A-</option>
+                <option>B+</option>
+                <option>B-</option>
+                <option>O+</option>
+                <option>O-</option>
+                <option>AB+</option>
+                <option>AB-</option>
+            </select>
+        </div>
+
+    </div>
+
+    <!-- CNIC — Pakistani only -->
+    <div class="mb-3" id="cnicField">
+        <label class="fw-bold">
+            CNIC Number *
+            <span class="text-muted fw-normal" style="font-size:.8rem;">(format: 00000-0000000-0)</span>
+        </label>
+        <input type="text" name="cnic" id="cnicInput"
+               class="form-control" placeholder="00000-0000000-0"
+               maxlength="15" autocomplete="off">
+        <div id="cnicMsg" style="font-size:.78rem; margin-top:4px;"></div>
+    </div>
+
+    <!-- PHONE — Pakistani only -->
+    <div class="mb-3" id="phoneField">
+        <label class="fw-bold">
+            Mobile Number *
+            <span class="text-muted fw-normal" style="font-size:.8rem;">(e.g. 0300-1234567)</span>
+        </label>
+        <input type="text" name="phone" id="phoneInput"
+               class="form-control" placeholder="0300-1234567"
+               maxlength="13" autocomplete="off">
+        <div id="phoneMsg" style="font-size:.78rem; margin-top:4px;"></div>
+    </div>
+
+    <!-- EMAIL — optional for PK, mandatory for foreigner -->
+    <div class="mb-3" id="emailField">
+        <label class="fw-bold" id="emailLabel">
+            Email Address
+            <span class="text-muted fw-normal" style="font-size:.8rem;" id="emailHint">
+                (optional — Donor ID will be emailed if provided)
+            </span>
+        </label>
+        <input type="email" name="email" id="emailInput"
+               class="form-control" placeholder="donor@email.com">
+        <div id="emailMsg" style="font-size:.78rem; margin-top:4px;"></div>
+    </div>
+
+</div>
+
+<hr>
+
+<!-- ══════════════════════════════════════════
+     UNITS — always shown
+══════════════════════════════════════════ -->
+<div class="mb-3">
+    <label class="fw-bold">Units to Donate *</label>
+    <input type="number" name="units" id="unitsInput"
+           class="form-control" placeholder="e.g. 1" min="1" required>
+</div>
+
+<button type="submit" class="btn btn-danger px-5" id="submitBtn">
+    💉 Submit Donation
+</button>
+
+</form>
+
+
+<!-- ══════════════════════════════════════════
+     SEARCH + DONOR LIST
+══════════════════════════════════════════ -->
+<input type="text" id="searchInput"
+       class="form-control mb-3"
+       placeholder="🔍 Search donor by name, CNIC, phone or Donor ID...">
+
+<h4>Registered Donors</h4>
+
+<div style="overflow-x:auto;">
+<table class="table table-bordered table-hover" id="donorTable">
+    <thead class="table-danger">
+        <tr>
+            <th>Donor ID</th>
+            <th>Name</th>
+            <th>Nationality</th>
+            <th>CNIC</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>Blood Group</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for d in donors %}
+        <tr>
+            <td><b>{{ d['donor_code'] }}</b></td>
+            <td>{{ d['name'] }}</td>
+            <td>
+                {% if d['nationality'] == 'Pakistani' %}
+                    🇵🇰 Pakistani
+                {% else %}
+                    🌍 Foreigner
+                {% endif %}
+            </td>
+            <td>{{ d['cnic'] or '—' }}</td>
+            <td>{{ d['phone'] or '—' }}</td>
+            <td>{{ d['email'] or '—' }}</td>
+            <td><span class="badge bg-danger">{{ d['blood_group'] }}</span></td>
+            <td>
+                <a href="/delete/{{ d['id'] }}"
+                   class="btn btn-danger btn-sm"
+                   onclick="return confirm('Delete {{ d['name'] }}?')">Delete</a>
+            </td>
+        </tr>
+        {% endfor %}
+        {% if not donors %}
+        <tr>
+            <td colspan="8" class="text-center text-muted py-4">
+                No donors registered yet.
+            </td>
+        </tr>
+        {% endif %}
+    </tbody>
+</table>
+</div>
+
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════ -->
+<script>
+
+// ── Element references ────────────────────────────────────
+const typeNew       = document.getElementById("typeNew");
+const typeOld       = document.getElementById("typeOld");
+const sectionNew    = document.getElementById("sectionNew");
+const sectionExist  = document.getElementById("sectionExisting");
+
+const natPK         = document.getElementById("natPK");
+const natFG         = document.getElementById("natFG");
+const natInfoBox    = document.getElementById("natInfoBox");
+
+const cnicField     = document.getElementById("cnicField");
+const phoneField    = document.getElementById("phoneField");
+const emailField    = document.getElementById("emailField");
+const emailLabel    = document.getElementById("emailLabel");
+const emailHint     = document.getElementById("emailHint");
+const emailInput    = document.getElementById("emailInput");
+const cnicInput     = document.getElementById("cnicInput");
+const phoneInput    = document.getElementById("phoneInput");
+
+const lookupByRadios = document.querySelectorAll("input[name='lookup_by']");
+const lookupVal     = document.getElementById("lookupVal");
+const lookupLabel   = document.getElementById("lookupLabel");
+const lookupResult  = document.getElementById("lookupResult");
+const donorPreview  = document.getElementById("donorPreview");
+
+// ── Toggle New / Existing ─────────────────────────────────
+// KEY FIX: when switching to Existing mode, disable all new-donor
+// required fields so the browser does NOT block form submission.
+function toggleDonorType() {
+    if (typeNew.checked) {
+        sectionNew.style.display   = "block";
+        sectionExist.style.display = "none";
+        // re-enable new-donor fields
+        document.getElementById("newName").disabled = false;
+        document.getElementById("newBg").disabled   = false;
+        lookupVal.required = false;
+        toggleNationality(); // restore required on cnic/phone/email
+    } else {
+        sectionNew.style.display   = "none";
+        sectionExist.style.display = "block";
+        // disable ALL new-donor inputs so they don't interfere
+        document.getElementById("newName").disabled = true;
+        document.getElementById("newBg").disabled   = true;
+        cnicInput.required   = false;
+        phoneInput.required  = false;
+        emailInput.required  = false;
+        cnicInput.disabled   = true;
+        phoneInput.disabled  = true;
+        emailInput.disabled  = true;
+        // lookup value is required when existing donor
+        lookupVal.required = true;
+    }
+}
+
+typeNew.addEventListener("change", toggleDonorType);
+typeOld.addEventListener("change", toggleDonorType);
+toggleDonorType();
+
+
+// ── Toggle Pakistani / Foreigner fields ───────────────────
+function toggleNationality() {
+    // Only applies when New Donor section is active
+    if (typeOld.checked) return;
+
+    // Re-enable all fields first
+    cnicInput.disabled  = false;
+    phoneInput.disabled = false;
+    emailInput.disabled = false;
+
+    if (natPK.checked) {
+        cnicField.style.display  = "block";
+        phoneField.style.display = "block";
+        cnicInput.required       = true;
+        phoneInput.required      = true;
+        emailInput.required      = false;
+        emailHint.textContent    = "(optional — Donor ID will be emailed if provided)";
+        emailLabel.childNodes[0].textContent = "Email Address ";
+        natInfoBox.innerHTML = "🇵🇰 <b>Pakistani donor:</b> CNIC and Mobile Number are <b>mandatory</b>. Email is optional — if provided, Donor ID will be sent by email.";
+        natInfoBox.className = "alert alert-info mb-3";
+    } else {
+        cnicField.style.display  = "none";
+        phoneField.style.display = "none";
+        cnicInput.required       = false;
+        phoneInput.required      = false;
+        cnicInput.disabled       = true;
+        phoneInput.disabled      = true;
+        emailInput.required      = true;
+        emailHint.textContent    = "(mandatory — Donor ID will be sent to this email)";
+        emailLabel.childNodes[0].textContent = "Email Address * ";
+        natInfoBox.innerHTML = "🌍 <b>Foreign donor:</b> Email is <b>mandatory</b>. Donor ID will be sent to the provided email. CNIC and phone are not required.";
+        natInfoBox.className = "alert alert-warning mb-3";
+    }
+}
+
+natPK.addEventListener("change", toggleNationality);
+natFG.addEventListener("change", toggleNationality);
+toggleNationality();
+
+
+// ── CNIC auto-format as user types ───────────────────────
+cnicInput.addEventListener("input", function() {
+    let digits = this.value.replace(/\D/g, "").substring(0, 13);
+    let formatted = digits;
+    if (digits.length > 5)  formatted = digits.substring(0,5) + "-" + digits.substring(5);
+    if (digits.length > 12) formatted = formatted.substring(0,13) + "-" + digits.substring(12);
+    this.value = formatted;
+
+    const msg = document.getElementById("cnicMsg");
+    if (digits.length === 13) {
+        msg.textContent = "✅ CNIC format valid";
+        msg.style.color = "green";
+    } else if (digits.length > 0) {
+        msg.textContent = "⚠️ CNIC must be 13 digits (00000-0000000-0)";
+        msg.style.color = "orange";
+    } else {
+        msg.textContent = "";
+    }
+});
+
+
+// ── Phone auto-format ────────────────────────────────────
+phoneInput.addEventListener("input", function() {
+    let digits = this.value.replace(/\D/g, "").substring(0, 11);
+    if (digits.length > 4) {
+        this.value = digits.substring(0,4) + "-" + digits.substring(4);
+    } else {
+        this.value = digits;
+    }
+
+    const msg = document.getElementById("phoneMsg");
+    const cleaned = digits.replace(/-/g,"");
+    if (cleaned.length === 11 && cleaned.startsWith("03")) {
+        msg.textContent = "✅ Valid Pakistani mobile number";
+        msg.style.color = "green";
+    } else if (cleaned.length > 0) {
+        msg.textContent = "⚠️ Must be 11 digits starting with 03 (e.g. 0300-1234567)";
+        msg.style.color = "orange";
+    } else {
+        msg.textContent = "";
+    }
+});
+
+
+// ── Lookup label updates ─────────────────────────────────
+const lookupPlaceholders = {
+    cnic:       "00000-0000000-0",
+    phone:      "0300-1234567",
+    donor_code: "e.g. D01062025123"
+};
+const lookupLabels = {
+    cnic:       "🪪 CNIC Number",
+    phone:      "📱 Mobile Number",
+    donor_code: "🆔 Donor ID"
+};
+
+lookupByRadios.forEach(radio => {
+    radio.addEventListener("change", function() {
+        lookupLabel.textContent    = lookupLabels[this.value];
+        lookupVal.placeholder      = lookupPlaceholders[this.value];
+        lookupVal.value            = "";
+        lookupResult.textContent   = "";
+        donorPreview.style.display = "none";
+    });
+});
+
+
+// ── Live donor lookup (existing) ─────────────────────────
+let lookupTimer = null;
+
+lookupVal.addEventListener("input", function() {
+    clearTimeout(lookupTimer);
+    const val = this.value.trim();
+    if (val.length < 5) {
+        lookupResult.textContent   = "";
+        donorPreview.style.display = "none";
+        return;
+    }
+
+    const by = document.querySelector("input[name='lookup_by']:checked").value;
+
+    lookupTimer = setTimeout(async () => {
+        lookupResult.innerHTML = "<span style='color:gray;'>Searching...</span>";
+        const res  = await fetch(`/api/lookup_donor?by=${by}&val=${encodeURIComponent(val)}`);
+        const data = await res.json();
+
+        if (!data.error) {
+            lookupResult.innerHTML = `<span style='color:green;'>✅ Donor found</span>`;
+            document.getElementById("prevName").textContent  = data.name;
+            document.getElementById("prevBg").textContent    = data.blood_group;
+            document.getElementById("prevNat").textContent   = data.nationality;
+            document.getElementById("prevPhone").textContent = data.phone || "—";
+            donorPreview.style.display = "block";
+        } else {
+            lookupResult.innerHTML     = `<span style='color:red;'>❌ No donor found with this ${by.replace('_',' ')}</span>`;
+            donorPreview.style.display = "none";
+        }
+    }, 500);
+});
+
+
+// ── Search table ─────────────────────────────────────────
+document.getElementById("searchInput").addEventListener("keyup", function() {
+    const val  = this.value.toLowerCase();
+    const rows = document.querySelectorAll("#donorTable tbody tr");
+    rows.forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(val) ? "" : "none";
+    });
+});
+
+
+// ── Enter key to submit ──────────────────────────────────
+document.getElementById("donorForm").addEventListener("keydown", function(e) {
+    if (e.key === "Enter" && e.target.tagName !== "SELECT") {
+        e.preventDefault();
+        this.submit();
+    }
+});
+
+</script>
+
+{% endblock %}

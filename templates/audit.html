@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="mb-0">🕐 Activity Log</h4>
+        <p class="text-muted mb-0" style="font-size:.83rem;">
+            All entries are recorded automatically by the database. No manual logging needed.
+        </p>
+    </div>
+    <span class="badge bg-secondary">{{ logs|length }} total entries</span>
+</div>
+
+{% if logs %}
+<div class="card shadow-sm">
+    <table class="table table-hover mb-0">
+        <thead class="table-dark">
+            <tr>
+                <th style="font-size:.78rem; width:120px;">Time</th>
+                <th style="font-size:.78rem; width:110px;">Event</th>
+                <th style="font-size:.78rem;">Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log in logs %}
+            <tr>
+                <td style="font-size:.78rem; color:gray; white-space:nowrap;">
+                    {{ log['event_time'][:10] }}<br>
+                    <b>{{ log['event_time'][11:16] if log['event_time']|length > 10 else '' }}</b>
+                </td>
+                <td>
+                    {% if log['table_name'] == 'Donation' %}
+                        <span class="badge bg-success">💉 Donation</span>
+                    {% elif log['table_name'] == 'Stock' and log['event_type'] == 'DELETE' %}
+                        <span class="badge bg-secondary">🗑️ Stock Out</span>
+                    {% elif log['table_name'] == 'Requests' %}
+                        {% if 'Approved' in (log['details'] or '') %}
+                        <span class="badge bg-primary">✅ Request</span>
+                        {% else %}
+                        <span class="badge bg-danger">❌ Request</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="badge bg-dark">{{ log['table_name'] }}</span>
+                    {% endif %}
+                </td>
+                <td style="font-size:.84rem;">{{ log['details'] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="card shadow-sm p-5 text-center text-muted">
+    <div style="font-size:2.5rem; margin-bottom:12px;">🕐</div>
+    <div>No activity recorded yet.</div>
+    <div style="font-size:.82rem; margin-top:6px;">Register a donor or submit a request to see activity here.</div>
+</div>
+{% endif %}
+
+{% endblock %}
