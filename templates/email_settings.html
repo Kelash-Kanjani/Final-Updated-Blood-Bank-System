@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>📧 Email Settings</h2>
+<p class="text-muted mb-4">Configure Gmail so the system can send Donor IDs automatically.</p>
+
+{% if test_result %}
+<div class="alert alert-{{ test_result[0] }}">
+    {% if test_result[0] == 'success' %}✅{% else %}❌{% endif %}
+    {{ test_result[1] }}
+</div>
+{% endif %}
+
+<!-- HOW TO GET APP PASSWORD -->
+<div class="card mb-4 border-warning">
+    <div class="card-header bg-warning text-dark fw-bold">
+        🔑 How to get a Gmail App Password (required)
+    </div>
+    <div class="card-body" style="font-size:.88rem; line-height:2;">
+        <ol class="mb-0">
+            <li>Go to <a href="https://myaccount.google.com/security" target="_blank"><b>myaccount.google.com/security</b></a></li>
+            <li>Make sure <b>2-Step Verification</b> is turned <b>ON</b></li>
+            <li>Search for <b>"App Passwords"</b> in the search bar at the top</li>
+            <li>Click <b>App Passwords</b> → type any name (e.g. "BloodBank") → click <b>Create</b></li>
+            <li>Copy the <b>16-character password</b> (e.g. <code>abcd efgh ijkl mnop</code>)</li>
+            <li>Paste it in the <b>App Password</b> field below</li>
+        </ol>
+        <div class="alert alert-info mt-3 mb-0" style="font-size:.82rem;">
+            ⚠️ Use your <b>Gmail address</b> as the sender, and the <b>App Password</b> (not your regular Gmail password).
+            Regular password will not work.
+        </div>
+    </div>
+</div>
+
+<!-- SETTINGS FORM -->
+<div class="card shadow p-4" style="max-width:580px;">
+
+    <form method="POST" id="settingsForm">
+
+        <div class="mb-3">
+            <label class="fw-bold">Gmail Address (Sender)</label>
+            <input type="email" name="email_sender" class="form-control"
+                   value="{{ sender }}"
+                   placeholder="yourname@gmail.com" required>
+            <div class="form-text">This is the address emails will be sent <i>from</i>.</div>
+        </div>
+
+        <div class="mb-3">
+            <label class="fw-bold">App Password</label>
+            <div class="input-group">
+                <input type="password" name="email_password" id="appPass"
+                       class="form-control"
+                       value="{{ password }}"
+                       placeholder="xxxx xxxx xxxx xxxx" required>
+                <button class="btn btn-outline-secondary" type="button"
+                        onclick="togglePass()">👁</button>
+            </div>
+            <div class="form-text">The 16-character App Password from Google (spaces are ok).</div>
+        </div>
+
+        <div class="mb-4 form-check">
+            <input type="checkbox" class="form-check-input" name="email_enabled"
+                   id="emailEnabled" {% if enabled %}checked{% endif %}>
+            <label class="form-check-label fw-bold" for="emailEnabled">
+                Enable Email Sending
+            </label>
+            <div class="form-text">Uncheck to disable email without deleting your credentials.</div>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap mb-4">
+            <button type="submit" name="action" value="save"
+                    class="btn btn-danger">
+                💾 Save Settings
+            </button>
+        </div>
+
+        <hr>
+
+        <h6 class="fw-bold mb-3">🧪 Send a Test Email</h6>
+        <div class="mb-3">
+            <label class="fw-bold">Send Test To</label>
+            <input type="email" name="test_to" class="form-control"
+                   placeholder="any email to receive the test"
+                   value="{{ sender }}">
+        </div>
+        <button type="submit" name="action" value="test"
+                class="btn btn-outline-danger">
+            📤 Send Test Email
+        </button>
+
+    </form>
+</div>
+
+<div class="card mt-4 p-3" style="max-width:580px; background:#f8f9fa; font-size:.82rem;">
+    <b>Current Status:</b>
+    {% if enabled %}
+    <span class="badge bg-success">✅ Email Enabled</span>
+    — using <code>{{ sender }}</code>
+    {% else %}
+    <span class="badge bg-secondary">⛔ Email Disabled</span>
+    — donor IDs will only be shown on screen
+    {% endif %}
+</div>
+
+<script>
+function togglePass() {
+    const f = document.getElementById("appPass");
+    f.type = f.type === "password" ? "text" : "password";
+}
+document.getElementById("settingsForm").addEventListener("keydown", function(e) {
+    if (e.key === "Enter" && e.target.tagName !== "SELECT") {
+        e.preventDefault();
+        this.querySelector('[name="action"][value="save"]').click();
+    }
+});
+</script>
+
+{% endblock %}

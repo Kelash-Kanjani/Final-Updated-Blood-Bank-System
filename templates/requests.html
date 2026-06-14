@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>All Requests</h2>
+
+<table class="table table-bordered">
+
+<tr class="table-danger">
+<th>Hospital</th>
+<th>Blood Group</th>
+<th>Units</th>
+<th>Status</th>
+</tr>
+
+{% for r in data %}
+<tr>
+<td>{{ r[1] }}</td>
+<td>{{ r[2] }}</td>
+<td>{{ r[3] }}</td>
+<td>{{ r[4] }}</td>
+</tr>
+{% endfor %}
+
+</table>
+
+{% endblock %}

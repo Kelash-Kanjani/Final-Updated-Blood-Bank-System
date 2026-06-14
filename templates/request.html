@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2>Request Blood</h2>
+
+<form method="POST" class="card p-4 shadow">
+
+<input name="hospital" class="form-control mb-3" placeholder="Hospital Name" required>
+
+<select name="blood_group" class="form-control mb-3" required>
+
+<option value="">Select Blood Group</option>
+<option>A+</option>
+<option>A-</option>
+<option>B+</option>
+<option>B-</option>
+<option>O+</option>
+<option>O-</option>
+<option>AB+</option>
+<option>AB-</option>
+
+</select>
+
+<input name="units" type="number" class="form-control mb-3" placeholder="Units" required>
+
+<button class="btn btn-danger">Submit Request</button>
+
+</form>
+
+{% endblock %}

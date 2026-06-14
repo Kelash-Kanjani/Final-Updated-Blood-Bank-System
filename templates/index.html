@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h4 class="mb-1">Dashboard</h4>
+<p class="text-muted mb-4" style="font-size:.88rem;">Welcome back. Here's what's happening in the blood bank today.</p>
+
+<!-- ROW 1: Main stats -->
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card p-3 shadow-sm text-center h-100">
+            <div style="font-size:2rem;">👤</div>
+            <div class="fw-bold fs-3">{{ donors }}</div>
+            <div class="text-muted" style="font-size:.82rem;">Registered Donors</div>
+            <div class="mt-1" style="font-size:.75rem;">
+                🇵🇰 {{ pk_donors }} Pakistani &nbsp;|&nbsp; 🌍 {{ fg_donors }} Foreign
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 shadow-sm text-center h-100 {{ 'border-warning' if expiring_soon > 0 else '' }}">
+            <div style="font-size:2rem;">🩸</div>
+            <div class="fw-bold fs-3">{{ stock }}</div>
+            <div class="text-muted" style="font-size:.82rem;">Units in Stock</div>
+            {% if expiring_soon > 0 %}
+            <div class="mt-1">
+                <span class="badge bg-warning text-dark">⚠️ {{ expiring_soon }} batch(es) expiring soon</span>
+            </div>
+            {% else %}
+            <div class="mt-1" style="font-size:.75rem; color:green;">✅ All stock valid</div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 shadow-sm text-center h-100">
+            <div style="font-size:2rem;">🏥</div>
+            <div class="fw-bold fs-3">{{ requests }}</div>
+            <div class="text-muted" style="font-size:.82rem;">Total Requests</div>
+            <div class="mt-1" style="font-size:.75rem;">
+                <span class="badge bg-success">{{ approved_count }} approved</span>
+                <span class="badge bg-danger ms-1">{{ rejected_count }} rejected</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 shadow-sm text-center h-100">
+            <div style="font-size:2rem;">📋</div>
+            <div class="fw-bold fs-3">{{ blood_summary|length }}</div>
+            <div class="text-muted" style="font-size:.82rem;">Blood Groups in Stock</div>
+            <div class="mt-1" style="font-size:.75rem; color:gray;">out of 8 possible types</div>
+        </div>
+    </div>
+</div>
+
+<!-- ROW 2: Blood group availability + Recent activity -->
+<div class="row g-3 mb-3">
+
+    <!-- Blood group table -->
+    <div class="col-md-5">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-danger text-white fw-bold" style="font-size:.88rem;">
+                🩸 Current Blood Availability
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="font-size:.78rem;">Blood Group</th>
+                            <th style="font-size:.78rem;">Units Available</th>
+                            <th style="font-size:.78rem;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set all_groups = ['A+','A-','B+','B-','O+','O-','AB+','AB-'] %}
+                        {% set available = {} %}
+                        {% for b in blood_summary %}
+                            {% set _ = available.update({b['blood_group']: b['total_units']}) %}
+                        {% endfor %}
+                        {% for grp in all_groups %}
+                        <tr>
+                            <td><span class="badge bg-danger">{{ grp }}</span></td>
+                            <td class="fw-bold">{{ available.get(grp, 0) }}</td>
+                            <td>
+                                {% if available.get(grp, 0) == 0 %}
+                                <span style="color:red; font-size:.75rem;">❌ Out of stock</span>
+                                {% elif available.get(grp, 0) <= 3 %}
+                                <span style="color:orange; font-size:.75rem;">⚠️ Low</span>
+                                {% else %}
+                                <span style="color:green; font-size:.75rem;">✅ Available</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity feed -->
+    <div class="col-md-7">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-dark text-white fw-bold" style="font-size:.88rem;">
+                🕐 Recent Activity
+                <a href="/audit" class="btn btn-outline-light btn-sm float-end" style="font-size:.72rem; padding:2px 8px;">View All</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_activity %}
+                <ul class="list-group list-group-flush">
+                    {% for log in recent_activity %}
+                    <li class="list-group-item py-2 px-3" style="font-size:.82rem;">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                {% if log['event_type'] == 'INSERT' and log['table_name'] == 'Donation' %}
+                                <span class="badge bg-success me-2">Donation</span>
+                                {% elif log['event_type'] == 'DELETE' and log['table_name'] == 'Stock' %}
+                                <span class="badge bg-secondary me-2">Stock Removed</span>
+                                {% elif log['table_name'] == 'Requests' %}
+                                <span class="badge bg-primary me-2">Request</span>
+                                {% else %}
+                                <span class="badge bg-dark me-2">{{ log['table_name'] }}</span>
+                                {% endif %}
+                                {{ log['details'] }}
+                            </div>
+                            <small class="text-muted ms-2 text-nowrap">{{ log['event_time'][11:16] if log['event_time'] else '' }}</small>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="p-4 text-center text-muted" style="font-size:.85rem;">
+                    No activity yet. Register a donor to get started.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ROW 3: Quick actions -->
+<div class="row g-2">
+    <div class="col-auto"><a href="/donor" class="btn btn-danger btn-sm">➕ Add Donor</a></div>
+    <div class="col-auto"><a href="/stock" class="btn btn-outline-danger btn-sm">🩸 View Stock</a></div>
+    <div class="col-auto"><a href="/request" class="btn btn-outline-secondary btn-sm">🏥 Blood Request</a></div>
+    <div class="col-auto"><a href="/history" class="btn btn-outline-secondary btn-sm">📜 History</a></div>
+</div>
+
+{% endblock %}
